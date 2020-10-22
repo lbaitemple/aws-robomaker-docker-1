@@ -1,18 +1,17 @@
-# Kudos to DOROWU for his amazing VNC 16.04 KDE image
-FROM dorowu/ubuntu-desktop-lxde-vnc
-LABEL maintainer "bpinaya@wpi.edu"
+FROM dorowu/ubuntu-desktop-lxde-vnc:bionic
+LABEL maintainer="Tiryoh<tiryoh@gmail.com>"
 
-RUN apt-get update && apt-get install -y dirmngr
-
-# Adding keys for ROS
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-RUN apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-
-# Installing ROS
-RUN apt-get update && apt-get install -y ros-melodic-desktop-full \
-		wget git nano python-rosinstall python3-colcon-common-extensions python3-pip
-RUN rosdep init && rosdep update
-
+RUN apt-get update -q && \
+    apt-get upgrade -yq && \
+    apt-get install -yq wget curl git build-essential vim sudo lsb-release locales bash-completion tzdata gosu python3-dev python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+RUN useradd --create-home --home-dir /home/ubuntu --shell /bin/bash --user-group --groups adm,sudo ubuntu && \
+    echo ubuntu:ubuntu | chpasswd && \
+    echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN git clone https://github.com/Tiryoh/ros_setup_scripts_ubuntu.git /tmp/ros_setup_scripts_ubuntu && \
+    gosu ubuntu /tmp/ros_setup_scripts_ubuntu/ros-melodic-desktop.sh && \
+    rm -rf /var/lib/apt/lists/*
+ENV USER ubuntu
 # Installing Colcon bundle tools
 RUN pip3 install -U setuptools && pip3 install colcon-ros-bundle
 
@@ -31,13 +30,14 @@ RUN /bin/bash -c "source /opt/ros/melodic/setup.bash && \
 COPY . /home/ubuntu/catkin_ws/src/
 
 # Updating ROSDEP and installing dependencies
-RUN cd /home/ubuntu/catkin_ws && sudo rosdep fix-permissions && rosdep update && rosdep install --from-paths src --ignore-src --rosdistro=melodic -y
+RUN apt-get update && apt-get upgrade -y
+RUN cd /home/ubuntu/catkin_ws &&  rosdep install --from-paths src --ignore-src --rosdistro=melodic -y
 
 # Adding scripts and adding permissions
-RUN cd /home/ubuntu/catkin_ws/src/scripts && \
-		chmod +x build.sh && \
-		chmod +x bundle.sh && \
-		chmod +x setup.sh
+#RUN cd /home/ubuntu/catkin_ws/src/scripts && \
+#                chmod +x build.sh && \
+#                chmod +x bundle.sh && \
+#                chmod +x setup.sh
 
 # Sourcing
 RUN /bin/bash -c "source /opt/ros/melodic/setup.bash && \
@@ -46,3 +46,6 @@ RUN /bin/bash -c "source /opt/ros/melodic/setup.bash && \
 
 # Dunno about this one tbh
 RUN /bin/bash -c "echo 'source /home/ubuntu/catkin_ws/devel/setup.bash' >> /root/.bashrc"
+
+
+
